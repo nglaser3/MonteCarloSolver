@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "LegendreTally.C": "cpp",
-        "main.C": "cpp"
+        "main.C": "cpp",
+        "Geometry.C": "cpp"
     }
 }

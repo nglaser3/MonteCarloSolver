@@ -59,7 +59,24 @@ void LegendreTally::expandBatch(std::vector<double> interactions)
     }
 }
 
+double calc_y(double x, int order,std::vector<double> coeffs)
+{
+    double val{0};
+    std::vector<double> vec{1*coeffs[0]};
+    val += vec[0];
+    if (order == 0) return val;
+    vec.push_back(x*coeffs[1]);
+    val += vec[1]; 
+    if (order ==1) return val;
 
+    for (int i = 1; i < order; i++)
+    {
+        double _val = coeffs[i+1]*((2*i+1) * x * vec[i] - i*vec[i-1])/(i+1);
+        vec.push_back(_val);
+        val += _val;
+    }
+    return val;
+}
 
 
 void printresults(std::vector<double> x, std::vector<double> y)
@@ -87,12 +104,7 @@ void LegendreTally::FinalizeFlux(int batches, int accuracy)
     {
         _x0 = (_right-_left)*(i/accuracy)+_left;
         _xlocs.push_back(_x0);
-        double _y0{0.0};
-        for (int n = 0; n <= _order; n++)
-        {
-            _y0 += calcLegendre(_x0)*end_coeffs[n];
-        }
-        _yvals.push_back(_y0);
+        _yvals.push_back(calc_y(_x0,_order,end_coeffs));
     }
     printresults(_xlocs,_yvals);
 }

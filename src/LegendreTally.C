@@ -7,9 +7,7 @@
 LegendreTally::LegendreTally(
     int order, double left, double right, Geometry & _geom, 
     std::vector<double> interaction_xs)
-: _order{order}, 
-  base_coeffs{}, 
-  base_powers{}, 
+: _order{order},  
   expanded_coeffs(order+1,0.0), 
   end_coeffs(order+1,0.0),
   _left{left},
@@ -17,53 +15,53 @@ LegendreTally::LegendreTally(
   xs{interaction_xs},
   geom{_geom}
 {
-    for (int n = 0; n <= _order; n++)
-    {
-        int _top_bound = floor(n/2);
-        
-        std::vector<double> cur_coeffs{};
-        std::vector<double> cur_powers{};
-        double coef;
-        for (int k = 0; k <= _top_bound; k++)
-        {
-            cur_powers.push_back(n-2*k);
-            coef = std::pow(-1,k) / std::pow(2,n) * binomial_coeff(n,k) 
-            * binomial_coeff(2*n-2*k,n);
-            cur_coeffs.push_back(coef);
-        }
-        base_coeffs.push_back(cur_coeffs);
-        base_powers.push_back(cur_powers);
-    }
 }
 
 double LegendreTally::transformDomains(double x0)
 {
     return 2*(x0-_left)/(_right - _left) - 1 ;
 }
-double LegendreTally::calcLegendre(double x0, int n)
+std::vector<double> LegendreTally::calcLegendre(double x0)
 {
     double _x = transformDomains(x0);
-    double val = 0.0;
-    for (int i = 0; i < base_powers[n].size(); i++)
+
+    std::vector<double> vals{1};
+
+    if (_order == 0) return vals;
+
+    vals.push_back(_x);
+
+    if (_order == 1) return vals;
+    
+    for (int i = 1; i < _order; i++)
     {
-        val += base_coeffs[n][i] * std::pow(_x,base_powers[n][i]);
+       double _value = ((2*i+1) * _x * vals[i] - i*vals[i-1])/(i+1);
+       vals.push_back(_value);
     }
-    return val;
+    return vals;
 }
 
 void LegendreTally::expandBatch(std::vector<double> interactions)
-{
-    for (int n = 0; n <= _order; n++)
+{   
+    for (double x0 : interactions)
     {
-        for (double x0 : interactions)
+        std::vector<double> place_holder = calcLegendre(x0);
+        double _xs{xs[geom.getCellIndex(x0)]};
+        for (int n = 0; n <= _order; n++)
         {
-            expanded_coeffs[n] += calcLegendre(x0,n) / xs[geom.getCellIndex(x0)];
+            expanded_coeffs[n] += place_holder[n] / _xs;
         }
-        expanded_coeffs[n] /= interactions.size();
-        end_coeffs[n] += expanded_coeffs[n];
     }
-
+    for (int i = 0; i <=_order; i++)
+    {
+        end_coeffs[i] += expanded_coeffs[i] / interactions.size();
+        expanded_coeffs[i] = 0.0;
+    }
 }
+
+
+
+
 void printresults(std::vector<double> x, std::vector<double> y)
 {
     std::cout<<"x,y";
@@ -92,20 +90,11 @@ void LegendreTally::FinalizeFlux(int batches, int accuracy)
         double _y0{0.0};
         for (int n = 0; n <= _order; n++)
         {
-            _y0 += calcLegendre(_x0,n)*end_coeffs[n];
+            _y0 += calcLegendre(_x0)*end_coeffs[n];
         }
         _yvals.push_back(_y0);
     }
     printresults(_xlocs,_yvals);
 }
 
-std::vector<std::vector<double>> LegendreTally::getBaseCoeffs()
-{
-    return base_coeffs;
-}
-
-std::vector<std::vector<double>> LegendreTally::getBasePowers()
-{
-    return base_powers;
-}
 
